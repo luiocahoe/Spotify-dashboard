@@ -12,20 +12,20 @@ El conjunto de datos utilizado fue descargado de Kaggle y contiene información 
 
 El panel interactivo está dividido en varias pestañas, cada una de las cuales ofrece diferentes tipos de análisis y visualizaciones:
 
-1. Introducción
+1. **Introducción**
    - **Descripción de los Datos:** Se proporciona una descripción detallada del conjunto de datos, incluyendo las variables disponibles y su significado.
    - **Importación y Limpieza de Datos:** Los datos se importan y limpian utilizando Python. Posteriormente, se guardan en formato Feather para facilitar su importación en R.
 
-2. Resumen
+2. **Resumen**
    - **Resumen Global:** Se presenta un resumen global de todas las canciones utilizando un dashboard interactivo. Aquí se pueden visualizar métricas generales y tendencias sobre la popularidad y las características de las canciones.
    - **Resumen por Artistas:** Se ofrece un análisis detallado de los artistas del top 10 con más canciones en el dataset. Esta sección se implementa como una aplicación shiny, permitiendo interactividad y exploración dinámica de los datos.
 
-3. Modelos Predictivos
+3. **Modelos Predictivos**
    - **Modelos de Regresión:** Se ha utilizado un modelo de regresión para predecir el número de reproducciones (streams) de las canciones. Este modelo permite entender mejor los factores que influyen en la popularidad de una canción.
    - **Modelos de Clasificación:** Se ha empleado un modelo de clasificación para predecir el modo (mayor o menor) de las canciones. Esto ayuda a categorizar las canciones basándose en sus características musicales.
    - **Tidymodels y Workflows:** Los modelos predictivos se construyeron utilizando el ecosistema tidymodels en R, aprovechando workflows para gestionar y entrenar los modelos de manera estructurada y reproducible.
 
-4. Tecnologías Utilizadas
+4. **Tecnologías Utilizadas**
     - **R:** Lenguaje de programación utilizado para el análisis de datos y la creación del dashboard.
     - **Python:** Utilizado para la importación y limpieza de datos.
     - **flexdashboard:** Framework para la creación de paneles interactivos en R.
