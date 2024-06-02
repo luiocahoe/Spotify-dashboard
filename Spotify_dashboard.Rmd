@@ -1,0 +1,1024 @@
+---
+title: "Spotify"
+logo: "complementario/logo.png"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    source_code: embed
+    theme:
+      version: 4
+      bg: "#FFFFFF"
+      fg: "#000000"
+      primary: "#1DB954"
+      navbar-bg: "#292637"
+      base_font: 
+        google: Prompt
+      heading_font:
+        google: Sen
+      code_font:
+        google: 
+          # arguments to sass::font_google() 
+          family: JetBrains Mono
+          local: false
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(knitr)
+```
+
+# Introducción {.storyboard}
+
+### Datos 
+
+Este conjunto de datos, descargado de Kaggle, contiene una lista exhaustiva de las canciones más famosas de 2023 según Spotify. Ofrece una variedad de características que van más allá de lo que usualmente se encuentra en datasets similares. Proporciona información detallada sobre los atributos de cada canción, su popularidad y su presencia en diversas plataformas musicales. Entre la información incluida se encuentran el nombre de la canción, el nombre del o los artistas, la fecha de lanzamiento, las listas de reproducción y los charts de Spotify, estadísticas de streaming, presencia en Apple Music y Deezer, las posiciones en las listas de Shazam y diversas características de audio.
+
+Está formado por las siguientes variables:
+
+- **track_name**: Nombre de la canción
+
+- **artist(s)_name**: Nombre del o los artistas de la canción
+
+- **artist_count**: Número de artistas que contribuyen a la canción
+- **released_year**: Año en que se lanzó la canción
+- **released_month**: Mes en que se lanzó la canción
+- **released_day**: Día del mes en que se lanzó la canción
+- **in_spotify_playlists**: Número de listas de reproducción de Spotify en las que está incluida la canción
+- **in_spotify_charts**: Presencia y posición de la canción en las listas de Spotify
+- **streams**: Número total de reproducciones en Spotify
+- **in_apple_playlists**: Número de listas de reproducción de Apple Music en las que está incluida la canción
+- **in_apple_charts**: Presencia y posición de la canción en las listas de Apple Music
+- **in_deezer_playlists**: Número de listas de reproducción de Deezer en las que está incluida la canción
+- **in_deezer_charts**: Presencia y posición de la canción en las listas de Deezer
+- **in_shazam_charts**: Presencia y posición de la canción en las listas de Shazam
+- **bpm**: Pulsos por minuto, una medida del tempo de la canción
+- **key**: Tonalidad de la canción
+- **mode**: Modo de la canción (mayor o menor)
+- **danceability_%**: Porcentaje que indica cuán adecuada es la canción para bailar
+- **valence_%**: Positividad del contenido musical de la canción
+- **energy_%**: Nivel percibido de energía de la canción
+- **acousticness_%**: Cantidad de sonido acústico en la canción
+- **instrumentalness_%**: Cantidad de contenido instrumental en la canción
+- **liveness_%**: Presencia de elementos de interpretación en vivo
+- **speechiness_%**: Cantidad de palabras habladas en la canción
+
+### Limitaciones
+
+En el contexto del uso de modelos supervisados de aprendizaje automático para la predicción de la popularidad de canciones, es crucial reconocer y abordar diversas limitaciones que pueden influir en la precisión y validez de los resultados obtenidos. A continuación, se discuten algunas de las principales limitaciones identificadas:
+
+1. **Nuevas canciones con mayor número de reproducciones mensuales**:
+   Las canciones más recientes tienden a tener un mayor número de reproducciones mensuales en comparación con canciones más antiguas. Este sesgo temporal puede afectar negativamente a los modelos supervisados, dado que estos pueden interpretar la popularidad reciente como una característica intrínseca de la canción, sin considerar la variabilidad temporal en las preferencias de los oyentes. Esto puede llevar a una sobreestimación de la popularidad de las nuevas canciones en comparación con las antiguas.
+
+2. **Popularidad de los artistas**:
+   La fama y reconocimiento de un artista contribuyen significativamente a la popularidad de una canción. Canciones de artistas conocidos pueden acumular más reproducciones independientemente de sus características técnicas o artísticas. Esta variable exógena puede sesgar los modelos, haciendo que las predicciones de popularidad se vean influidas más por el renombre del artista que por la calidad o los atributos intrínsecos de la canción.
+
+3. **Influencia de las redes sociales**:
+   Algunas canciones pueden mantener o incrementar su popularidad durante períodos más prolongados debido a la influencia de las redes sociales, en lugar de basarse en aspectos técnicos de la música. Campañas virales y tendencias en plataformas como TikTok o Instagram pueden hacer que canciones específicas se mantengan relevantes durante más tiempo, distorsionando así la relación entre las características técnicas de la canción y su popularidad.
+
+4. **Cambios estacionales en la popularidad**:
+   La popularidad de ciertas canciones puede ser estacional. Por ejemplo, canciones de verano tienden a perder popularidad al llegar el otoño. Estos patrones estacionales pueden introducir variabilidad adicional en los datos, complicando la capacidad del modelo para hacer predicciones precisas a lo largo de todo el año. Los modelos deben ser capaces de capturar y ajustar estos patrones estacionales para mejorar su precisión.
+
+5. **Insuficiencia de datos**:
+   Contar con un conjunto de datos de 800 registros aproximadamente no es suficiente para entrenar modelos supervisados de aprendizaje automático robustos. Una muestra pequeña puede no capturar adecuadamente la diversidad y complejidad del fenómeno estudiado, limitando la capacidad del modelo para hacer predicciones precisas y generalizables.
+
+### Importación
+
+La lectura de los datos se realizó utilizando Python. Los datos, provenientes de Kaggle, se descargaron en formato CSV y JSON, y ambos formatos se importarán para su análisis.
+
+```{python echo=TRUE}
+import pandas as pd
+datos=pd.read_csv("datos/spotify-2023.csv", encoding="latin1",thousands=",")
+datos.head()
+```
+
+### Tratamiento
+
+Veamos un pequeño resumen de nuestros datos:
+
+```{python echo=TRUE}
+datos.info()
+```
+
+Podemos observar como la variable "in_shazam_charts" muestra 903 valores no nulos de un total de 953 entradas. Esto significa que hay 50 valores perdidos en esta variable. Lo mismo pasa con la variable "key" tiene 858 valores no nulos de un total de 953 entradas, lo que indica que hay 95 valores perdidos en esta variable.
+
+Para abordar los valores perdidos en estas variables, existen varias estrategias. Una opción es eliminar las filas con valores perdidos si representan una pequeña proporción del conjunto de datos y no afectan significativamente el análisis. Otra opción es imputar valores para los valores perdidos utilizando técnicas como la media, la mediana o la moda, dependiendo de la naturaleza de los datos y el contexto del análisis. Abordaremos nuestro problema con la primera opción:
+
+```{python echo=TRUE}
+datos.dropna(inplace=True)
+```
+
+También cabe destacar que la variable "streams" es considerada como tipo "object" en lugar de numérica, lo que sugiere que podría haber valores no numéricos presentes en esta columna. Esto podría deberse a la presencia de caracteres no numéricos, como texto o símbolos, en algunas de las entradas. Veamos que registros no están bien:
+
+```{python echo=TRUE}
+datos[datos['streams'].str.isnumeric() == False]["streams"]
+```
+
+Eliminemos este registro también:
+
+```{python echo=TRUE}
+datos['streams'] = pd.to_numeric(datos['streams'],errors='coerce')
+datos = datos.dropna(subset=['streams'])
+datos.info()
+```
+
+Ahora procederemos a convertir todos los elementos del DataFrame que son de tipo entero a tipo flotante con el propósito de facilitar los cálculos numéricos, dado que realizaremos análisis de regresión. Además, transformaremos las columnas 'key' y 'mode' en variables categóricas y restableceremos el índice del DataFrame para garantizar una organización adecuada de los datos.
+
+```{python}
+int_columns = datos.select_dtypes(include=['int']).columns
+datos[int_columns] = datos[int_columns].astype(float)
+datos['key'] = datos['key'].astype('category')
+datos['mode'] = datos['mode'].astype('category')
+datos.reset_index(drop=True, inplace=True)
+datos.info()
+```
+
+Por último comprobaremos si hay regsitros dupiclados en el DataFrame resultante:
+
+```{python echo=TRUE}
+duplicados = datos.duplicated(subset=['track_name', 'artist(s)_name'])
+registros_duplicados = datos[duplicados]
+registros_duplicados
+```
+
+Eliminemos los regsitros duplicados y quedemonos con aquel que tenga más "streams":
+
+```{python echo=TRUE}
+datos = datos.sort_values(by='streams', ascending=False).drop_duplicates(subset=['track_name', 'artist(s)_name'], keep='first')
+```
+
+Como podemos observar, la columna "artist(s)_name" contiene los nombres de los artistas participantes en cada canción, los cuales están unidos por comas. Para realizar un análisis individual de cada artista, es necesario separar estos registros y disponerlos de manera independiente. Por lo tanto, se ha creado una nueva versión de los datos denominada "datos_sep" con este propósito:
+
+```{python echo=TRUE}
+datos["artist(s)_name"].head(6)
+datos_sep=datos.copy()
+datos_sep["artist(s)_name"]=datos_sep["artist(s)_name"].str.split(", ")
+datos_sep=datos_sep.explode("artist(s)_name")
+datos_sep = datos_sep.rename(columns={"artist(s)_name": "artist_names"})
+column_order = ['track_name', 'artist_names'] + [col for col in datos_sep.columns if col != 'track_name' and col != 'artist_names'] # Para ponerlas en orden
+datos_sep = datos_sep[column_order]
+datos_sep.reset_index(drop=True, inplace=True)
+datos_sep.info()
+```
+
+### Guardado de datos
+
+Tras la lectura y procesamiento de los datos, estos fueron almacenados en archivos `feather` para su posterior uso en R. Se usó esta extensión porque es extremadamente rápido para leer y escribir dato. Además, este formato es compatible con múltiples lenguajes de programación, principalmente Python y R, lo que facilita la colaboración entre diferentes equipos. Se generaron dos variantes: `Spotify.feather` y `Spotify_sep.feather`. 
+
+```{python eval=FALSE, echo=TRUE}
+import pyarrow.feather as feather
+feather.write_feather(datos, 'datos.feather',compression="uncompressed")
+feather.write_feather(datos_sep, 'datos_sep.feather',compression="uncompressed")
+```
+
+# Global {data-navmenu="Resumen" data-orientation=rows}
+
+## Fila 1 
+
+### Cuadro
+
+```{r}
+rm(list=ls())
+library(shiny)
+library(bslib)
+library(DT)
+library(arrow)
+library(tidyverse)
+library(tidymodels)
+library(plotly)
+library(highcharter)
+library(ggplot2)
+datos=read_feather("datos/datos.feather")
+valueBox(nrow(datos), 
+         caption="Número de canciones", 
+         icon="fa-music",
+         color="#00B0F6")
+```
+
+### Cuadro
+
+```{r}
+valueBox(length(unique(datos$`artist(s)_name`)), 
+         caption="Artistas", 
+         icon="fa-person",
+         color="#F8766D")
+```
+
+### Cuadro
+
+```{r}
+valueBox(round(mean(datos$streams)/1000000,2), 
+         caption="millones de streams de media", 
+         icon="fa-play",
+         color="#E76BF3")
+```
+
+### Cuadro
+
+```{r}
+valueBox(names(table(datos$key))[which.max(table(datos$key))], 
+         caption="es la tonalidad más usada", 
+         icon="fa-medium",
+         color="#FFB558")
+```
+
+### Cuadro
+
+```{r}
+valueBox(trunc(mean(datos$bpm)), 
+         caption= "pulsos por minuto de media", 
+         icon="fa-gauge-high",
+         color="#00BF7D")
+```
+
+## Fila 2
+
+### 
+
+```{r}
+datos %>% 
+  arrange(desc(streams)) %>% 
+  slice(1:50) %>% 
+  hchart(
+    type = "treemap", 
+    hcaes(x = track_name, value = streams, color = streams)
+  ) %>%
+  hc_colorAxis(stops = color_stops(colors = c("white", "#1DB954"))) %>%
+  hc_title(text = "Top 50 Canciones por streams") 
+```
+
+###
+
+```{r}
+datos %>%
+  count(mode) %>% 
+  hchart("column", hcaes(x = mode, y = n)) %>%
+  hc_title(text = "") %>%
+  hc_subtitle(text = "") %>%
+  hc_yAxis(title = list(text = "")) %>%
+  hc_xAxis(title = list(text = "")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_chart(zoomType = "x") %>%
+  hc_colors(c("#7CB5EC")) 
+```
+
+
+### 
+
+```{r}
+datos$streams=as.double(datos$streams)
+grafico3=datos %>% 
+  mutate(artist_count=factor(artist_count)) %>% 
+  ggplot()+
+  geom_boxplot(aes(x=artist_count,y=streams,fill=artist_count)) +
+  labs(title = "", 
+       y = "Streams",x="Número de artistas") +
+  theme_minimal() +
+  theme(legend.position = "none")
+ggplotly(grafico3)
+```
+
+
+## Fila 3 
+
+### 
+
+```{r}
+datos_resumen= datos %>%
+  mutate(year_group = case_when(
+    released_year >= 2000 & released_year <= 2009 ~ "2000s",
+    released_year >= 2010 & released_year <= 2019 ~ "2010s",
+    released_year == 2020 ~ "2020",
+    released_year == 2021 ~ "2021",
+    released_year == 2022 ~ "2022",
+    released_year == 2023 ~ "2023",
+    TRUE ~ "Antes del 2000"  
+  )) %>%
+  mutate(year_group = factor(year_group, levels = c("Antes del 2000", "2000s", "2010s", "2020", "2021", "2022", "2023"), ordered = TRUE))
+
+nombres_meses=c(
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+)
+todos_los_meses =data.frame(
+  Mes_Numero = 1:12,
+  Mes_Nombre = factor(nombres_meses, levels = nombres_meses, ordered = TRUE)
+)
+datos_resumen=inner_join(datos_resumen, todos_los_meses,
+           by = c("released_month"="Mes_Numero"))
+grafico4=datos_resumen %>% 
+  ggplot(aes(x = Mes_Nombre, fill = year_group)) +
+  geom_bar() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(fill="Año",x="",y="",title="Número de canciones por mes")
+ggplotly(grafico4)
+```
+
+###
+
+```{r}
+datos_sep=read_feather("datos/datos_sep.feather")
+datos_sep=datos_sep %>% 
+  rename_with(~ str_replace(., "_%", ""), contains("_%"))
+datos_sep %>% 
+  group_by(artist_names) %>% 
+  summarise(Total=n()) %>% 
+  arrange(desc(Total)) %>% 
+  slice(1:10) %>% 
+  hchart(
+    "pie", hcaes(x = artist_names, y = Total),
+    name = "Canciones"
+    ) 
+```
+
+###
+
+```{r}
+library(DT)
+datos %>% 
+  select(track_name,`artist(s)_name`,released_year,streams) %>% 
+  arrange(desc(streams)) %>% 
+  datatable(options=list(pageLength = 5))
+```
+
+# Top 10 {data-navmenu="Resumen"}
+
+## Col
+
+###
+
+```{r echo=FALSE}
+Top10Artistas=datos_sep %>% 
+  group_by(artist_names) %>% 
+  summarise(Total=n()) %>% 
+  arrange(desc(Total)) %>% 
+  slice(1:10) %>% 
+  pull(artist_names)
+DatosTop10Artistas=datos_sep%>% 
+  group_by(artist_names,released_month) %>% 
+  summarise(Canciones=n()) %>% 
+  filter(artist_names %in% Top10Artistas) %>% 
+  ungroup() %>% 
+  complete(artist_names, released_month,fill = list(Canciones = 0))
+DatosTop10Artistas=inner_join(DatosTop10Artistas, todos_los_meses,
+           by = c("released_month"="Mes_Numero")) %>% 
+  mutate(Canciones = replace_na(Canciones, 0))
+max_canciones=max(DatosTop10Artistas$Canciones)
+
+library(shiny)
+library(flexdashboard)
+library(ggplot2)
+library(plotly)
+library(highcharter)
+library(tidyverse)
+library(DT)
+
+shinyApp(
+  ui = fluidPage(
+    titlePanel("Resumen por artista (Top 10)"),
+    page_sidebar(
+                 sidebar = sidebar(
+                   selectInput("artista", "Selecciona un Artista:",
+                               choices = Top10Artistas)
+                 ),
+                 textOutput("texto_acumulado"),
+                 fluidRow(
+                   style = "height: 200px;",
+                   plotlyOutput("grafico_meses",height = 200),
+                 ),
+                 fluidRow(
+                   style = "height: 300px;",
+                   column(6,
+                     plotlyOutput("grafico_variables",height = 300),
+                   ),
+                   column(6,
+                     plotlyOutput("grafico_modo",height = 300),
+                   )
+                 ),
+                 fluidRow(
+                   style = "height: 310px;",
+                   column(8,
+                     highchartOutput("grafico_tree",height=300),
+                   ),
+                   column(4,
+                      highchartOutput("grafico_tarta",height=300)   
+                  )
+                 ),
+                 fluidRow(
+                   column(12,
+                          DTOutput("tabla_musica",height=400)
+                          )
+                 )
+    )
+  ),
+  server = function(input, output) {
+    datosFiltrados = reactive({
+      datos_sep %>% 
+        filter(artist_names == input$artista)
+    })
+    
+    output$texto_acumulado = renderText({
+      dato_streams_total = datosFiltrados() %>% 
+        group_by(artist_names) %>% 
+        summarise(total_rep = sum(streams)) %>% 
+        pull(total_rep)
+      paste("Acumula", round(dato_streams_total / 1000000, 2), "millones de streams")
+    })
+    
+    output$grafico_meses = renderPlotly({
+      DatosTop10Artistas %>%
+        filter(artist_names == input$artista) %>%
+        ggplot(aes(x = Mes_Nombre, y = Canciones, fill = Mes_Nombre)) +
+        geom_bar(stat = "identity") +
+        labs(x = "", y = "", title = paste("Número de canciones de", input$artista, "por mes")) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        ylim(0, max_canciones) +
+        guides(fill = "none") +
+        theme_minimal()
+    })
+    
+    output$grafico_variables = renderPlotly({
+      datosFiltrados() %>% 
+        select(-(1:(ncol(datos_sep) - 7))) %>% 
+        pivot_longer(everything(), names_to = "Variable", values_to = "Value") %>% 
+        ggplot(aes(x = Value, fill = Variable, y = after_stat(scaled))) +
+        geom_density(alpha = 0.5) +  
+        theme_minimal() +  
+        labs(title = paste("Distribución de las variables de", input$artista),
+             x = "Valor (%)", y = "") +
+        theme_minimal() 
+    })
+    
+    output$grafico_modo = renderPlotly({
+      datosFiltrados() %>% 
+        select(mode) %>% 
+        ggplot(aes(x = mode, fill = mode)) +
+        geom_bar(color = "black") +
+        labs(title = paste("Modo de canciones de", input$artista),
+             x = "",
+             y = "") +
+        theme_minimal() +
+        theme(legend.position = "none")
+    })
+    output$tabla_musica=renderDT({
+      datos_sep %>%
+        filter(artist_names == input$artista) %>% 
+        select(track_name,artist_names,released_year,streams) %>% 
+                 arrange(desc(streams)) %>%
+                 datatable(options=list(pageLength = 10))
+    })
+    output$grafico_tree=renderHighchart({
+      datos_sep %>% 
+        filter(artist_names==input$artista) %>% 
+        hchart(
+          type = "treemap", 
+          hcaes(x = track_name, value = streams, color = streams)
+          ) %>%
+        hc_colorAxis(stops = color_stops(colors = c("white", "#1DB954"))) %>%
+        hc_title(text = "Top canciones por streams") 
+    })
+    output$grafico_tarta=renderHighchart({
+      datos_sep %>% 
+  filter(artist_names=="Taylor Swift") %>% 
+  group_by(key) %>% 
+  summarise(Total=n()) %>% 
+  arrange(key) %>% 
+  hchart(
+    "pie", hcaes(x = key, y = Total),
+    name = "Canciones"
+  ) %>% 
+        hc_title(text="Keys más usadas")
+    })
+  }
+)
+
+```
+
+
+# Elementos comunes {data-navmenu="Regresión"}
+
+## Col
+
+### Elementos comunes
+
+```{r}
+load("complementario/Modelos_reg.RData")
+```
+
+```{r echo=TRUE, eval=FALSE}
+datos_modelo_reg=datos %>%
+  select(-c("released_year",
+            "released_month",
+            "released_day",
+            "track_name", 
+            "artist(s)_name")) %>% 
+  rename_with(~ str_replace(., "_%", ""), contains("_%"))
+
+particion_reg = datos_modelo_reg %>% 
+  initial_split(prop = 0.8)
+
+datos_reg_ent= particion_reg %>% training()
+
+datos_reg_test= particion_reg %>% testing()
+
+preprocesado_reg=recipe(streams ~ .,datos_modelo_reg) %>%
+  step_novel(all_nominal()) %>%
+  step_dummy(all_nominal()) %>%
+  step_zv(all_predictors()) %>% 
+  step_normalize(all_predictors())
+
+cv_folds_reg=vfold_cv(datos_reg_ent, v = 10)
+```
+
+# Regresión lineal {data-navmenu="Regresión"}
+
+## Col
+
+### Regresión lineal
+
+```{r echo=TRUE, eval=FALSE}
+lm_reg_spec=linear_reg() %>% 
+  set_engine("lm") %>% 
+  set_mode("regression")
+
+lm_reg_wf=
+  workflow() %>% 
+  add_model(lm_reg_spec) %>% 
+  add_recipe(preprocesado_reg) 
+
+resultados_lm_reg_cv <- lm_reg_wf %>% 
+  fit_resamples(
+    resamples = cv_folds_reg
+  )
+```
+
+```{r echo=TRUE}
+resultados_lm_reg_cv %>%
+  collect_metrics()
+```
+
+```{r echo=TRUE,eval=FALSE}
+modelo_lm_reg=lm_reg_wf %>%
+  last_fit(particion_reg)
+```
+
+```{r echo=TRUE}
+modelo_lm_reg %>% 
+  collect_metrics()
+```
+
+## Col
+
+### Importancia de las variables
+
+```{r}
+library(vip)
+modelo_lm_reg %>% 
+  extract_fit_engine() %>%
+  vip()
+```
+
+# Bosques aleatorios de regresión {data-navmenu="Regresión"}
+
+## Col
+
+### Bosques aleatorios de regresión
+
+```{r echo=TRUE,eval=FALSE}
+rf_reg_spec=rand_forest(trees=tune(),
+                    min_n=tune()) %>% 
+  set_engine("randomForest") %>% 
+  set_mode("regression")
+
+rf_reg_wf=
+  workflow() %>% 
+  add_model(rf_reg_spec) %>% 
+  add_recipe(preprocesado_reg) 
+
+grid_rf_reg = expand_grid(trees=seq(100,200,by=50),
+                           min_n=seq(2,8,by=2))
+
+resultados_tune_rf_reg = rf_reg_wf %>% 
+  tune_grid(
+    resamples = cv_folds_reg,
+    grid = grid_rf_reg)
+```
+
+```{r echo=TRUE,eval=FALSE}
+resultados_tune_rf_reg %>%
+  collect_metrics()
+```
+
+```{r echo=TRUE,eval=FALSE}
+rf_reg_mejor=resultados_tune_rf_reg %>%
+  select_best(metric="rsq")
+
+rf_reg_wfl_final = rf_reg_wf %>% 
+  finalize_workflow(rf_reg_mejor)
+
+modelo_rf_reg_final = rf_reg_wfl_final %>%
+  last_fit(particion_reg)
+```
+
+```{r echo=TRUE}
+modelo_rf_reg_final %>% 
+  collect_metrics() 
+```
+
+## Col
+
+### Importancia de las variables
+
+```{r}
+modelo_rf_reg_final %>% 
+  extract_fit_engine() %>%
+  vip()
+```
+
+
+# Máquinas de soporte vectorial {data-navmenu="Regresión"}
+
+## Col
+
+### Máquinas de soporte vectorial
+
+```{r echo=TRUE,eval=FALSE}
+svm_reg_spec=svm_rbf(cost=tune(),rbf_sigma=tune()) %>% 
+  set_engine("kernlab") %>% 
+  set_mode("regression")
+
+svm_reg_wf=
+  workflow() %>% 
+  add_model(svm_reg_spec) %>% 
+  add_recipe(preprocesado_reg) 
+
+grid_svm_reg = expand_grid(cost = 3^(1:4), rbf_sigma = 3^(-5:-2))
+
+resultados_tune_svm_reg = svm_reg_wf %>% 
+  tune_grid(
+    resamples = cv_folds_reg,
+    grid = grid_svm_reg)
+```
+
+```{r echo=TRUE}
+resultados_tune_svm_reg %>%
+  collect_metrics()
+```
+
+```{r echo=TRUE,eval=FALSE}
+svm_reg_mejor=resultados_tune_svm_reg %>%
+  select_best(metric="rsq")
+
+svm_reg_wfl_final = svm_reg_wf %>% 
+  finalize_workflow(svm_reg_mejor)
+
+modelo_svm_reg_final = svm_reg_wfl_final %>%
+  last_fit(particion_reg)
+```
+
+```{r echo=TRUE}
+modelo_svm_reg_final %>% 
+  collect_metrics() 
+```
+
+# Redes neuronales {data-navmenu="Regresión"}
+
+## Col
+
+### Redes neuronales
+
+# Elementos comunes {data-navmenu="Clasificación"}
+
+## Col
+
+
+### Elementos comunes
+
+```{r}
+load("complementario/Modelos_class.RData")
+```
+
+```{r echo=TRUE,eval=FALSE}
+datos_modelo_class = datos %>%
+  rename_with(~ str_replace(., "_%", ""), contains("_%")) %>%
+  select(-c(1:16))
+
+particion_class = initial_split(datos_modelo_class, prop = 0.8)
+
+datos_class_ent = training(particion_class)
+
+datos_class_test = testing(particion_class)
+
+preprocesado_class = recipe(mode ~ ., datos_modelo_class) %>%
+  step_zv(all_numeric()) %>%
+  step_normalize(all_numeric())
+
+cv_folds_class = vfold_cv(datos_class_ent, v = 10, strata = mode)
+```
+
+### Clases balanceadas
+
+```{r}
+datos %>%
+  count(mode) %>% 
+  hchart("column", hcaes(x = mode, y = n)) %>%
+  hc_title(text = "") %>%
+  hc_subtitle(text = "") %>%
+  hc_yAxis(title = list(text = "")) %>%
+  hc_xAxis(title = list(text = "")) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_chart(zoomType = "x") %>%
+  hc_colors(c("#7CB5EC")) 
+```
+
+## Col
+
+### Gráfico multivariante de las variables
+
+```{r}
+library(GGally)
+datos_modelo_class %>% 
+  select(-mode) %>% 
+  ggpairs(
+        lower = list(continuous = wrap("points", alpha = 0.2, color = "blue")),
+        diag = list(continuous = wrap("barDiag", fill = "blue")))
+```
+
+
+# Regresión logística {data-navmenu="Clasificación"}
+
+## Col
+
+### Regresión logística
+
+```{r echo=TRUE,eval=FALSE}
+log_class_spec = logistic_reg() %>%
+  set_engine("glm") %>%
+  set_mode("classification")
+
+log_class_wfl = workflow() %>%
+  add_recipe(preprocesado_class) %>%
+  add_model(log_class_spec)
+
+resultados_log_class_cv = log_class_wfl %>% 
+  fit_resamples(
+    resamples = cv_folds_class,
+    metrics = metric_set(roc_auc, accuracy)
+    )
+```
+
+```{r echo=TRUE}
+resultados_log_class_cv %>%
+  collect_metrics()
+```
+
+```{r echo=TRUE,eval=FALSE}
+modelo_log_class_final=log_class_wfl %>% 
+  last_fit(particion_class)
+```
+
+```{r echo=TRUE}
+modelo_log_class_final %>% 
+  collect_predictions() %>% 
+  conf_mat(truth = mode, estimate = .pred_class)
+
+modelo_log_class_final %>%
+  collect_predictions() %>% 
+  metrics(truth = mode, estimate = .pred_class)
+```
+
+## Col
+
+### Importancia de las variables
+
+```{r}
+modelo_log_class_final %>% 
+  extract_fit_engine() %>%
+  vip()
+```
+
+### Curva ROC
+
+```{r}
+modelo_log_class_final %>%
+  collect_predictions() %>% 
+  roc_curve(truth = mode, .pred_Major) %>% 
+  autoplot
+```
+
+# Máquinas de soporte vectorial {data-navmenu="Clasificación"}
+
+## Col
+
+### Máquinas de soporte vectorial
+
+```{r echo=TRUE,eval=FALSE}
+svm_class_spec = svm_rbf(cost = tune(), rbf_sigma = tune()) %>%
+  set_engine("kernlab") %>%
+  set_mode("classification")
+
+svm_class_wfl = workflow() %>%
+  add_recipe(preprocesado_class) %>%
+  add_model(svm_class_spec)
+
+grid_svm_class = expand_grid(cost = 10^seq(-3, 2, length.out = 5), 
+                             rbf_sigma = 10^seq(-3, 0, length.out = 5))
+
+resultados_svm_class_tune = svm_class_wfl %>% 
+  tune_grid(
+    resamples = cv_folds_class,
+    grid = grid_svm_class,
+    metrics = metric_set(roc_auc, accuracy)
+  )
+```
+
+```{r echo=TRUE}
+resultados_svm_class_tune %>%
+  collect_metrics()
+```
+
+```{r echo=TRUE,eval=FALSE}
+svm_class_mejor=resultados_svm_class_tune %>%
+  select_best(metric="accuracy")
+
+svm_class_wfl_final = svm_class_wfl %>% 
+  finalize_workflow(svm_class_mejor)
+
+modelo_svm_class_final = svm_class_wfl_final %>%
+  last_fit(particion_class)
+```
+
+```{r echo=TRUE}
+modelo_svm_class_final %>% 
+  collect_predictions() %>% 
+  conf_mat(truth = mode, estimate = .pred_class)
+  
+modelo_svm_class_final %>% 
+  collect_predictions() %>% 
+  metrics(truth = mode, estimate = .pred_class)
+```
+
+```{r}
+modelo_svm_class_final %>% 
+  collect_predictions() %>% 
+  conf_mat(truth = mode, estimate = .pred_class)
+```
+
+## Col
+
+### Curva ROC
+
+```{r}
+modelo_svm_class_final %>%
+  collect_predictions() %>% 
+  roc_curve(truth = mode, .pred_Major) %>% 
+  autoplot
+```
+
+# Bosques aleatorios de clasificación {data-navmenu="Clasificación"}
+
+## Col
+
+### Bosques aleatorios de clasificación
+
+```{r echo=TRUE,eval=FALSE}
+rf_class_spec = rand_forest(
+  mtry = tune(),
+  min_n = tune(),
+  trees = 1000  # Número de árboles fijo
+) %>%
+  set_engine("randomForest") %>%
+  set_mode("classification")
+
+rf_class_wfl = workflow() %>%
+  add_recipe(preprocesado_class) %>%
+  add_model(rf_class_spec)
+
+grid_rf_class = expand_grid(
+  mtry = seq(2, ncol(datos_class_ent) - 1, by = 2), 
+  min_n = seq(2, 22, by = 4))
+
+resultados_tune_rf_class = rf_class_wfl %>% 
+  tune_grid(
+    resamples = cv_folds_class,
+    grid = grid_rf_class,
+    metrics = metric_set(roc_auc, accuracy)
+)
+```
+
+```{r echo=TRUE}
+resultados_tune_rf_class %>%
+  collect_metrics()
+```
+
+```{r echo=TRUE,eval=FALSE}
+rf_class_mejor=resultados_tune_rf_class %>%
+  select_best(metric="accuracy")
+
+rf_class_wfl_final = rf_class_wfl %>% 
+  finalize_workflow(rf_class_mejor)
+
+modelo_rf_class_final = rf_class_wfl_final %>%
+  last_fit(particion_class)
+```
+
+```{r echo=TRUE}
+modelo_rf_class_final %>%
+  collect_predictions() %>% 
+  metrics(truth = mode, estimate = .pred_class)
+
+modelo_rf_class_final %>% 
+  collect_predictions() %>% 
+  conf_mat(truth = mode, estimate = .pred_class)
+```
+
+## Col
+
+### Importancia de las variables
+
+```{r}
+modelo_rf_class_final %>% 
+  extract_fit_engine() %>%
+  vip()
+```
+
+### Curva ROC
+
+```{r}
+modelo_rf_class_final %>%
+  collect_predictions() %>% 
+  roc_curve(truth = mode, .pred_Major) %>% 
+  autoplot
+```
+
+# K-nearest neighbors {data-navmenu="Clasificación"}
+
+## Col
+
+### K-nearest neighbors
+
+```{r echo=TRUE,eval=FALSE}
+knn_class_spec = nearest_neighbor(
+  neighbors = tune(),       
+  weight_func = tune(),     
+  dist_power = tune()       
+) %>%
+  set_engine("kknn") %>%
+  set_mode("classification")
+
+knn_class_wfl = workflow() %>%
+  add_recipe(preprocesado_class) %>%
+  add_model(knn_class_spec)
+
+grid_knn_class = expand_grid(
+  neighbors = seq(1, 20, by = 2),
+  weight_func = c("gaussian", "optimal"),
+  dist_power = 1:2
+)
+
+resultados_tune_knn_class = knn_class_wfl %>% 
+  tune_grid(
+    resamples = cv_folds_class,
+    grid = grid_knn_class,
+    metrics = metric_set(roc_auc, accuracy)
+)
+```
+
+```{r echo=TRUE}
+resultados_tune_knn_class %>%
+  collect_metrics()
+```
+
+```{r echo=TRUE,eval=FALSE}
+knn_class_mejor=resultados_tune_knn_class %>%
+  select_best(metric="accuracy")
+
+knn_class_wfl_final = knn_class_wfl %>% 
+  finalize_workflow(knn_class_mejor)
+
+modelo_knn_class_final = knn_class_wfl_final %>%
+  last_fit(particion_class)
+```
+
+```{r echo=TRUE}
+modelo_knn_class_final %>% 
+  collect_predictions() %>% 
+  conf_mat(truth = mode, estimate = .pred_class)
+
+modelo_knn_class_final %>%
+  collect_predictions() %>% 
+  metrics(truth = mode, estimate = .pred_class)
+```
+
+## Col
+
+### Curva ROC
+
+```{r}
+modelo_knn_class_final %>%
+  collect_predictions() %>% 
+  roc_curve(truth = mode, .pred_Major) %>% 
+  autoplot
+```
