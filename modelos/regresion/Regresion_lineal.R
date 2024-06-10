@@ -7,10 +7,11 @@ datos_modelo_reg=datos %>%
             "released_month",
             "released_day",
             "track_name", 
-            "artist(s)_name"))
+            "artist(s)_name")) %>% 
+  rename_with(~ str_replace(., "_%", ""), contains("_%"))
 
 particion_reg = datos_modelo_reg %>% 
-  initial_split()
+  initial_split(prop=0.8)
 
 datos_reg_ent= particion_reg %>% training()
 

@@ -9,10 +9,11 @@ datos_modelo_reg=datos %>%
             "released_month",
             "released_day",
             "track_name", 
-            "artist(s)_name"))
+            "artist(s)_name")) %>% 
+  rename_with(~ str_replace(., "_%", ""), contains("_%"))
 
 particion_reg = datos_modelo_reg %>% 
-  initial_split()
+  initial_split(prop=0.8)
 
 datos_reg_ent= particion_reg %>% training()
 
@@ -61,7 +62,6 @@ svm_reg_wfl_final = svm_reg_wf %>%
 modelo_svm_reg_final = svm_reg_wfl_final %>%
   last_fit(particion_reg)
 
-# Mostrar matriz de confusión
 modelo_svm_reg_final %>% 
   collect_metrics() 
 

@@ -3,6 +3,7 @@ title: "Spotify"
 logo: "complementario/logo.png"
 output:
   flexdashboard::flex_dashboard:
+    css: "complementario/layout.css"
     orientation: columns
     source_code: embed
     theme:
@@ -507,7 +508,9 @@ shinyApp(
 load("complementario/Modelos_reg.RData")
 ```
 
-```{r echo=TRUE, eval=FALSE}
+Selección de las variables y renombramos todas las columnas que contienen el patrón _% eliminando ese patrón del nombre de la columna
+
+```{r echo=TRUE,eval=FALSE}
 datos_modelo_reg=datos %>%
   select(-c("released_year",
             "released_month",
@@ -515,22 +518,50 @@ datos_modelo_reg=datos %>%
             "track_name", 
             "artist(s)_name")) %>% 
   rename_with(~ str_replace(., "_%", ""), contains("_%"))
+```
 
+División de datos en conjuntos de entrenamiento y prueba
+
+```{r echo=TRUE,eval=FALSE}
 particion_reg = datos_modelo_reg %>% 
   initial_split(prop = 0.8)
 
 datos_reg_ent= particion_reg %>% training()
 
 datos_reg_test= particion_reg %>% testing()
+```
 
+Creamos una receta de preprocesamiento de datos
+
+```{r echo=TRUE,eval=FALSE}
 preprocesado_reg=recipe(streams ~ .,datos_modelo_reg) %>%
   step_novel(all_nominal()) %>%
   step_dummy(all_nominal()) %>%
   step_zv(all_predictors()) %>% 
   step_normalize(all_predictors())
+```
 
+Creamos un objeto para realizar validación cruzada
+
+```{r echo=TRUE}
 cv_folds_reg=vfold_cv(datos_reg_ent, v = 10)
 ```
+
+## Col
+
+### Streams
+
+```{r}
+grafico_streams=ggplot(datos_modelo_reg, aes(x = streams)) +
+  geom_density(color = "blue", fill = "lightblue", alpha = 0.4) +
+  labs(title = "",
+       x = "Streams",
+       y = "") +
+  theme_minimal()
+
+ggplotly(grafico_streams)
+```
+
 
 # Regresión lineal {data-navmenu="Regresión"}
 
@@ -538,26 +569,40 @@ cv_folds_reg=vfold_cv(datos_reg_ent, v = 10)
 
 ### Regresión lineal
 
-```{r echo=TRUE, eval=FALSE}
+Especificamos el tipo de modelos que queremos usar junto con el motor
+
+```{r echo=TRUE,eval=FALSE}
 lm_reg_spec=linear_reg() %>% 
   set_engine("lm") %>% 
   set_mode("regression")
+```
 
+Creamos un workflow, añadiendole el modelo y el preprocesado
+
+```{r echo=TRUE, eval=FALSE}
 lm_reg_wf=
   workflow() %>% 
   add_model(lm_reg_spec) %>% 
   add_recipe(preprocesado_reg) 
+```
 
-resultados_lm_reg_cv <- lm_reg_wf %>% 
+Ajusta el flujo de trabajo utilizando validación cruzada con los folds definidos anteriormente
+
+```{r echo=TRUE,eval=FALSE}
+resultados_lm_reg_cv = lm_reg_wf %>% 
   fit_resamples(
     resamples = cv_folds_reg
   )
 ```
 
+"Recogemos" las metricas de la validación cruzada
+
 ```{r echo=TRUE}
 resultados_lm_reg_cv %>%
   collect_metrics()
 ```
+
+Validamos nuestro modelo con nuestro conjunto de prueba
 
 ```{r echo=TRUE,eval=FALSE}
 modelo_lm_reg=lm_reg_wf %>%
@@ -586,20 +631,34 @@ modelo_lm_reg %>%
 
 ### Bosques aleatorios de regresión
 
+Especificación para un modelo de bosque aleatorio donde los hiperparámetros que se configuran para ser ajustados mediante `tune()`
+
 ```{r echo=TRUE,eval=FALSE}
 rf_reg_spec=rand_forest(trees=tune(),
                     min_n=tune()) %>% 
   set_engine("randomForest") %>% 
   set_mode("regression")
+```
 
+Creamos el workflow
+
+```{r echo=TRUE,eval=FALSE}
 rf_reg_wf=
   workflow() %>% 
   add_model(rf_reg_spec) %>% 
   add_recipe(preprocesado_reg) 
+```
 
+Creamos una cuadrícula de hiperparámetros para el tune()
+
+```{r echo=TRUE,eval=FALSE}
 grid_rf_reg = expand_grid(trees=seq(100,200,by=50),
                            min_n=seq(2,8,by=2))
+```
 
+Ajustamos el flujo de trabajo utilizando validación cruzada con los folds definidos anteriormente
+
+```{r echo=TRUE,eval=FALSE}
 resultados_tune_rf_reg = rf_reg_wf %>% 
   tune_grid(
     resamples = cv_folds_reg,
@@ -611,13 +670,23 @@ resultados_tune_rf_reg %>%
   collect_metrics()
 ```
 
+Seleccionamos la combinación de hiperparámetros que maximiza el coeficiente de determinación (el mejor modelo)
+
 ```{r echo=TRUE,eval=FALSE}
 rf_reg_mejor=resultados_tune_rf_reg %>%
   select_best(metric="rsq")
+```
 
+Actualizamos el flujo de trabajo con los mejores hiperparámetros seleccionados
+
+```{r echo=TRUE,eval=FALSE}
 rf_reg_wfl_final = rf_reg_wf %>% 
   finalize_workflow(rf_reg_mejor)
+```
 
+Validamos nuestro modelo con nuestro conjunto de prueba
+
+```{r echo=TRUE,eval=FALSE}
 modelo_rf_reg_final = rf_reg_wfl_final %>%
   last_fit(particion_reg)
 ```
@@ -688,6 +757,8 @@ modelo_svm_reg_final %>%
 ## Col
 
 ### Redes neuronales
+
+Véase el `RedesNeuronales_reg.ipynb`, en la carpeta modelos > regresion.
 
 # Elementos comunes {data-navmenu="Clasificación"}
 
