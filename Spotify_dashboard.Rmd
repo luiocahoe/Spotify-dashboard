@@ -40,7 +40,7 @@ Está formado por las siguientes variables:
 
 - **track_name**: Nombre de la canción
 
-- **artist(s)_name**: Nombre del o los artistas de la canción
+- <strong>artist(s)_name</strong>: Nombre del o los artistas de la canción
 
 - **artist_count**: Número de artistas que contribuyen a la canción
 - **released_year**: Año en que se lanzó la canción
@@ -665,7 +665,7 @@ resultados_tune_rf_reg = rf_reg_wf %>%
     grid = grid_rf_reg)
 ```
 
-```{r echo=TRUE,eval=FALSE}
+```{r echo=TRUE}
 resultados_tune_rf_reg %>%
   collect_metrics()
 ```
