@@ -8,6 +8,12 @@ Este proyecto presenta un panel interactivo desarrollado con flexdashboard y shi
 
 El conjunto de datos utilizado fue descargado de Kaggle y contiene información detallada sobre varias características de cada canción, su popularidad y su presencia en diferentes plataformas musicales.
 
+## Visualización
+
+El archivo HTML ya compilado se encuentra disponible en el repositorio. Puedes abrirlo directamente en tu navegador web favorito para ver la visualización completa de los datos. No se requiere ningún software adicional para esta acción.
+
+***Nota:*** La funcionalidad de la aplicación Shiny no estará disponible en el archivo HTML precompilado. Si deseas interactuar con la aplicación Shiny, deberás compilar el archivo.
+
 ## Estructura del Panel
 
 El panel interactivo está dividido en varias pestañas, cada una de las cuales ofrece diferentes tipos de análisis y visualizaciones:
